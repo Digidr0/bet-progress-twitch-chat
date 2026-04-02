@@ -223,6 +223,17 @@ function ProgressBar(props: ProgressBarProps) {
       </div>
 
       <div class={`preview-meta ${showMeta() ? "is-visible" : ""}`}>
+        <span class="preview-left">
+          <img
+            class="preview-icon"
+            src="/svg/Magic-ball-white.svg"
+            alt=""
+            aria-hidden="true"
+          />
+          <span class="preview-label">
+            {props.isExpired ? "Прогноз завершён" : "Прогноз"}
+          </span>
+        </span>
         <span class="preview-title">{props.title}</span>
         <span class={`preview-time ${props.isExpired ? "is-muted" : ""}`}>
           {props.time}
