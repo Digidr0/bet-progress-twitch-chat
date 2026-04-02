@@ -1,4 +1,4 @@
-import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import "./TwitchSocketPanel.css";
 
 const CLIENT_ID_KEY = "twitch:client-id";
@@ -61,6 +61,7 @@ const parseEventSubPayload = (raw: string) => {
 };
 
 export default function TwitchSocketPanel() {
+  const [collapsed, setCollapsed] = createSignal(true);
   const [clientId, setClientId] = createSignal("");
   const [accessToken, setAccessToken] = createSignal("");
   const [channelName, setChannelName] = createSignal("");
@@ -520,138 +521,152 @@ export default function TwitchSocketPanel() {
 
   return (
     <section class="panel socket-panel">
-      <h2>EventSub: прогнозы и баллы</h2>
+      <button
+        type="button"
+        class="socket-toggle"
+        aria-expanded={collapsed() ? "false" : "true"}
+        onClick={() => setCollapsed((value) => !value)}
+      >
+        <span>EventSub: прогнозы и баллы</span>
+        <span class={`socket-toggle-arrow ${collapsed() ? "" : "is-open"}`}>
+          ▾
+        </span>
+      </button>
 
-      <div class="auth-grid">
-        <label class="field">
-          <span>Client ID</span>
-          <input
-            type="text"
-            value={clientId()}
-            placeholder="Twitch Client ID"
-            onInput={(event) => {
-              const value = event.currentTarget.value;
-              setClientId(value);
-              storeValue(CLIENT_ID_KEY, value);
-            }}
-          />
-        </label>
-        <label class="field">
-          <span>Access Token</span>
-          <input
-            type="text"
-            value={accessToken()}
-            placeholder="oauth token"
-            onInput={(event) => {
-              const value = event.currentTarget.value;
-              setAccessToken(value);
-              storeValue(ACCESS_TOKEN_KEY, value);
-            }}
-          />
-        </label>
-      </div>
-
-      <div class="socket-actions">
-        <button type="button" class="action primary" onClick={startOAuth}>
-          Войти через Twitch
-        </button>
-        <button type="button" class="action" onClick={validateToken}>
-          Проверить токен
-        </button>
-        <button type="button" class="action ghost" onClick={clearAuth}>
-          Очистить токен
-        </button>
-        <div class={`auth-status ${authStatus()}`}>
-          <span class="status-dot" />
-          <span>{authStatusText()}</span>
-          <span class="status-meta">
-            {authUserLogin() ? authUserLogin() : "user: —"}
-            {authExpiresIn() !== null ? ` · ${authExpiresIn()}s` : ""}
-          </span>
-        </div>
-      </div>
-
-      <div class="auth-meta">
-        <div>
-          <span class="meta-label">Scopes:</span> {scopeBadges()}
-        </div>
-        {requiredScopesMissing().length > 0 ? (
-          <div class="meta-warning">
-            Не хватает: {requiredScopesMissing().join(", ")}
+      <Show when={!collapsed()}>
+        <div class="socket-content">
+          <div class="auth-grid">
+            <label class="field">
+              <span>Client ID</span>
+              <input
+                type="text"
+                value={clientId()}
+                placeholder="Twitch Client ID"
+                onInput={(event) => {
+                  const value = event.currentTarget.value;
+                  setClientId(value);
+                  storeValue(CLIENT_ID_KEY, value);
+                }}
+              />
+            </label>
+            <label class="field">
+              <span>Access Token</span>
+              <input
+                type="text"
+                value={accessToken()}
+                placeholder="oauth token"
+                onInput={(event) => {
+                  const value = event.currentTarget.value;
+                  setAccessToken(value);
+                  storeValue(ACCESS_TOKEN_KEY, value);
+                }}
+              />
+            </label>
           </div>
-        ) : (
-          <div class="meta-ok">Все нужные scopes получены.</div>
-        )}
-      </div>
 
-      <label class="field">
-        <span>Имя канала</span>
-        <input
-          type="text"
-          value={channelName()}
-          placeholder="Например, shroud"
-          onInput={(event) => {
-            const value = event.currentTarget.value;
-            setChannelName(value);
-            storeValue(CHANNEL_KEY, value);
-          }}
-        />
-      </label>
+          <div class="socket-actions">
+            <button type="button" class="action primary" onClick={startOAuth}>
+              Войти через Twitch
+            </button>
+            <button type="button" class="action" onClick={validateToken}>
+              Проверить токен
+            </button>
+            <button type="button" class="action ghost" onClick={clearAuth}>
+              Очистить токен
+            </button>
+            <div class={`auth-status ${authStatus()}`}>
+              <span class="status-dot" />
+              <span>{authStatusText()}</span>
+              <span class="status-meta">
+                {authUserLogin() ? authUserLogin() : "user: —"}
+                {authExpiresIn() !== null ? ` · ${authExpiresIn()}s` : ""}
+              </span>
+            </div>
+          </div>
 
-      <div class="socket-actions">
-        <button
-          type="button"
-          class="action primary"
-          onClick={() => connectSocket()}
-        >
-          Подключить EventSub
-        </button>
-        <button type="button" class="action" onClick={disconnectSocket}>
-          Отключить
-        </button>
-        <button type="button" class="action" onClick={subscribeAll}>
-          Подписаться на события
-        </button>
-        <button type="button" class="action ghost" onClick={clearLogs}>
-          Очистить логи
-        </button>
-        <div class={`socket-status ${socketStatus()}`}>
-          <span class="status-dot" />
-          <span>{socketStatusText()}</span>
-          <span class="status-meta">
-            {sessionId() ? `session ${sessionId()}` : "session: —"}
-          </span>
-        </div>
-      </div>
+          <div class="auth-meta">
+            <div>
+              <span class="meta-label">Scopes:</span> {scopeBadges()}
+            </div>
+            {requiredScopesMissing().length > 0 ? (
+              <div class="meta-warning">
+                Не хватает: {requiredScopesMissing().join(", ")}
+              </div>
+            ) : (
+              <div class="meta-ok">Все нужные scopes получены.</div>
+            )}
+          </div>
 
-      <div class="auth-meta">
-        <div>
-          <span class="meta-label">EventSub WS:</span> {socketUrl()}
-        </div>
-      </div>
+          <label class="field">
+            <span>Имя канала</span>
+            <input
+              type="text"
+              value={channelName()}
+              placeholder="Например, shroud"
+              onInput={(event) => {
+                const value = event.currentTarget.value;
+                setChannelName(value);
+                storeValue(CHANNEL_KEY, value);
+              }}
+            />
+          </label>
 
-      <div class="socket-logs two-columns">
-        <div class="socket-log-group">
-          <div class="socket-log">
-            <h3>Ответы</h3>
-            <pre>{socketResponsesText()}</pre>
+          <div class="socket-actions">
+            <button
+              type="button"
+              class="action primary"
+              onClick={() => connectSocket()}
+            >
+              Подключить EventSub
+            </button>
+            <button type="button" class="action" onClick={disconnectSocket}>
+              Отключить
+            </button>
+            <button type="button" class="action" onClick={subscribeAll}>
+              Подписаться на события
+            </button>
+            <button type="button" class="action ghost" onClick={clearLogs}>
+              Очистить логи
+            </button>
+            <div class={`socket-status ${socketStatus()}`}>
+              <span class="status-dot" />
+              <span>{socketStatusText()}</span>
+              <span class="status-meta">
+                {sessionId() ? `session ${sessionId()}` : "session: —"}
+              </span>
+            </div>
           </div>
-          <div class="socket-log">
-            <h3>Ошибки</h3>
-            <pre>{socketErrorsText()}</pre>
+
+          <div class="auth-meta">
+            <div>
+              <span class="meta-label">EventSub WS:</span> {socketUrl()}
+            </div>
+          </div>
+
+          <div class="socket-logs two-columns">
+            <div class="socket-log-group">
+              <div class="socket-log">
+                <h3>Ответы</h3>
+                <pre>{socketResponsesText()}</pre>
+              </div>
+              <div class="socket-log">
+                <h3>Ошибки</h3>
+                <pre>{socketErrorsText()}</pre>
+              </div>
+            </div>
+            <div class="socket-log-group">
+              <div class="socket-log">
+                <h3>JSON</h3>
+                <pre>{socketJsonText()}</pre>
+              </div>
+              <div class="socket-log">
+                <h3>Прогнозы (JSON)</h3>
+                <pre>{predictionJsonText()}</pre>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="socket-log-group">
-          <div class="socket-log">
-            <h3>JSON</h3>
-            <pre>{socketJsonText()}</pre>
-          </div>
-          <div class="socket-log">
-            <h3>Прогнозы (JSON)</h3>
-            <pre>{predictionJsonText()}</pre>
-          </div>
-        </div>
-      </div>
+      </Show>
     </section>
   );
 }

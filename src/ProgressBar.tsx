@@ -24,17 +24,19 @@ type ProgressBarProps = {
 
 type PreviewStage = "inactive" | "intro" | "details" | "bar";
 
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+
 const segmentIcons = [
-  "/svg/Ball-predict-1.svg",
-  "/svg/Ball-predict-2.svg",
-  "/svg/Ball-predict-3.svg",
-  "/svg/Ball-predict-4.svg",
-  "/svg/Ball-predict-5.svg",
-  "/svg/Ball-predict-6.svg",
+  asset("svg/Ball-predict-1.svg"),
+  asset("svg/Ball-predict-2.svg"),
+  asset("svg/Ball-predict-3.svg"),
+  asset("svg/Ball-predict-4.svg"),
+  asset("svg/Ball-predict-5.svg"),
+  asset("svg/Ball-predict-6.svg"),
 ];
 
 const ICON_THRESHOLD = 20;
-const INTRO_DURATION_MS = 2000;
+const INTRO_DURATION_MS = 2400;
 const BAR_DELAY_MS = 450;
 
 const segmentType = (index: number, total: number) => {
@@ -46,7 +48,7 @@ const segmentType = (index: number, total: number) => {
 
 const segmentIcon = (index: number, total: number) => {
   if (total === 2 && index === 1) {
-    return "/svg/Ball-predict-2-red.svg";
+    return asset("svg/Ball-predict-2-red.svg");
   }
   return segmentIcons[index] ?? segmentIcons[segmentIcons.length - 1];
 };
@@ -159,8 +161,12 @@ function Segment(props: SegmentProps) {
 
 function ProgressBar(props: ProgressBarProps) {
   const [stage, setStage] = createSignal<PreviewStage>("inactive");
+  const [transitionsEnabled, setTransitionsEnabled] = createSignal(false);
   const total = () => props.options.length;
   const stageTimers: number[] = [];
+  let enableTransitionsFrame = 0;
+  let initialized = false;
+  let previousActive = false;
 
   const clearStageTimers = () => {
     while (stageTimers.length > 0) {
@@ -171,11 +177,35 @@ function ProgressBar(props: ProgressBarProps) {
     }
   };
 
+  const scheduleTransitionsEnable = () => {
+    if (transitionsEnabled() || enableTransitionsFrame !== 0) return;
+    enableTransitionsFrame = requestAnimationFrame(() => {
+      enableTransitionsFrame = 0;
+      setTransitionsEnabled(true);
+    });
+  };
+
   createEffect(
     on(
       () => [props.active, props.hasData] as const,
       ([active, hasData]) => {
         clearStageTimers();
+
+        if (!initialized) {
+          setStage(active ? "bar" : "inactive");
+          if (hasData) {
+            initialized = true;
+            previousActive = active;
+            scheduleTransitionsEnable();
+          }
+          return;
+        }
+
+        if (active === previousActive) {
+          return;
+        }
+
+        previousActive = active;
 
         if (!active) {
           setStage("inactive");
@@ -207,6 +237,9 @@ function ProgressBar(props: ProgressBarProps) {
 
   onCleanup(() => {
     clearStageTimers();
+    if (enableTransitionsFrame !== 0) {
+      cancelAnimationFrame(enableTransitionsFrame);
+    }
   });
 
   const showIntro = () => props.active && props.hasData && stage() === "intro";
@@ -216,17 +249,17 @@ function ProgressBar(props: ProgressBarProps) {
 
   return (
     <section
-      class={`panel preview ${props.active ? "is-active" : "is-inactive"} stage-${stage()}`}
+      class={`panel preview ${stage() === "inactive" ? "is-inactive" : "is-active"} ${transitionsEnabled() ? "has-transitions" : ""} stage-${stage()}`}
     >
       <div class={`preview-intro ${showIntro() ? "is-visible" : ""}`}>
-        ПРОГНОЗ
+        <span class="preview-intro-text">Прогноз запущен!</span>
       </div>
 
       <div class={`preview-meta ${showMeta() ? "is-visible" : ""}`}>
         <span class="preview-left">
           <img
             class="preview-icon"
-            src="/svg/Magic-ball-white.svg"
+            src={asset("svg/Magic-ball-white.svg")}
             alt=""
             aria-hidden="true"
           />
