@@ -1,0 +1,33 @@
+﻿:root {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #f1eaff;
+  background-color: #0c0715;
+  --accent: #772ce8;
+  --accent-strong: #8b4bff;
+  --accent-soft: rgba(119, 44, 232, 0.45);
+  --panel: #151024;
+  --panel-border: #2b1d46;
+  --panel-shadow: rgba(0, 0, 0, 0.45);
+  --text: #f1eaff;
+  --muted: #b6a8d6;
+  --input-bg: #0f0a1a;
+  --input-border: #322047;
+  --input-placeholder: #6e5a8d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0c0715;
+  color: #f1eaff;
+}
+
+input,
+button {
+  font-family: inherit;
+}
