@@ -161,6 +161,7 @@ function App() {
       );
       return {
         title: typeof data.title === "string" ? data.title : "",
+        active: typeof data.active === "boolean" ? data.active : true,
         endTimeUnix:
           typeof data.endTimeUnix === "number" &&
           Number.isFinite(data.endTimeUnix)
@@ -340,11 +341,13 @@ function App() {
 
   const previewOptions = () => previewData()?.options ?? [];
   const hasPreview = () => previewData() !== null;
+  const previewActive = () => previewData()?.active ?? false;
 
   return (
     <div class="page">
       <div class="column">
         <ProgressBar
+          active={previewActive()}
           title={previewTitle()}
           time={formattedRemainingTime()}
           options={previewOptions()}

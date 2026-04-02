@@ -2,6 +2,7 @@
   Index,
   createEffect,
   createSignal,
+  on,
   onCleanup,
   onMount,
 } from "solid-js";
@@ -13,12 +14,15 @@ type ProgressOption = {
 };
 
 type ProgressBarProps = {
+  active: boolean;
   title: string;
   time: string;
   options: ProgressOption[];
   hasData: boolean;
   isExpired: boolean;
 };
+
+type PreviewStage = "inactive" | "intro" | "details" | "bar";
 
 const segmentIcons = [
   "/svg/Ball-predict-1.svg",
@@ -30,6 +34,8 @@ const segmentIcons = [
 ];
 
 const ICON_THRESHOLD = 20;
+const INTRO_DURATION_MS = 2000;
+const BAR_DELAY_MS = 450;
 
 const segmentType = (index: number, total: number) => {
   if (total === 2) {
@@ -152,28 +158,78 @@ function Segment(props: SegmentProps) {
 }
 
 function ProgressBar(props: ProgressBarProps) {
+  const [stage, setStage] = createSignal<PreviewStage>("inactive");
   const total = () => props.options.length;
+  const stageTimers: number[] = [];
+
+  const clearStageTimers = () => {
+    while (stageTimers.length > 0) {
+      const timerId = stageTimers.pop();
+      if (timerId !== undefined) {
+        window.clearTimeout(timerId);
+      }
+    }
+  };
+
+  createEffect(
+    on(
+      () => [props.active, props.hasData] as const,
+      ([active, hasData]) => {
+        clearStageTimers();
+
+        if (!active) {
+          setStage("inactive");
+          return;
+        }
+
+        if (!hasData) {
+          setStage("bar");
+          return;
+        }
+
+        setStage("intro");
+
+        stageTimers.push(
+          window.setTimeout(() => {
+            setStage("details");
+          }, INTRO_DURATION_MS),
+        );
+
+        stageTimers.push(
+          window.setTimeout(() => {
+            setStage("bar");
+          }, INTRO_DURATION_MS + BAR_DELAY_MS),
+        );
+      },
+      { defer: false },
+    ),
+  );
+
+  onCleanup(() => {
+    clearStageTimers();
+  });
+
+  const showIntro = () => props.active && props.hasData && stage() === "intro";
+  const showMeta = () =>
+    props.active && (stage() === "details" || stage() === "bar");
+  const showBar = () => props.active && stage() === "bar";
 
   return (
-    <section class="panel preview">
-      <div class="preview-header">
-        <span class="preview-left">
-          <img
-            class="preview-icon"
-            src="/svg/Magic-ball-white.svg"
-            alt=""
-            aria-hidden="true"
-          />
-          <span class="preview-label">
-            {props.isExpired ? "Прогноз завершён" : "Прогноз"}
-          </span>
-        </span>
+    <section
+      class={`panel preview ${props.active ? "is-active" : "is-inactive"} stage-${stage()}`}
+    >
+      <div class={`preview-intro ${showIntro() ? "is-visible" : ""}`}>
+        ПРОГНОЗ
+      </div>
+
+      <div class={`preview-meta ${showMeta() ? "is-visible" : ""}`}>
         <span class="preview-title">{props.title}</span>
         <span class={`preview-time ${props.isExpired ? "is-muted" : ""}`}>
           {props.time}
         </span>
       </div>
-      <div class="progress-bar">
+
+      <div class={`progress-bar ${showBar() ? "is-visible" : ""}`}>
         {props.hasData ? (
           <Index each={props.options}>
             {(option, index) => (
